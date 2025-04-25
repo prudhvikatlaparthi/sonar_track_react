@@ -19,7 +19,7 @@ const ApiCall = async (endPoint: string, options: AxiosRequestConfig = {}) => {
         console.log('API Response:', response.data); // Log the response data for debugging
         return response.data; // Return the response data
     } catch (error: any) {
-        console.error('API Error:', error); // Log the error for debugging
+        console.log('API Error:', error); // Log the error for debugging
         throw new Error(error.response?.data?.message || error.message || 'Something went wrong');
     }
 };

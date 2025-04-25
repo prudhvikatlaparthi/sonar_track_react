@@ -1,5 +1,6 @@
 {
   "expo": {
+    "assetBundlePatterns": ["**/*"],
     "name": "sonar-track",
     "slug": "sonar-track",
     "version": "1.0.0",

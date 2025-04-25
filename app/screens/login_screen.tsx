@@ -6,6 +6,7 @@ import MyButton from '@/app/components/mybutton';
 import useApiCall from '@/app/hooks/use_api_call';
 import ToastManager, { Toast } from 'toastify-react-native'
 import { useRouter } from 'expo-router';
+import LocalStorage from '../utils/local_storage';
 
 const LoginScreen = () => {
 
@@ -27,47 +28,90 @@ const LoginScreen = () => {
   }, [width]);
   const { data, loading, error, callApi } = useApiCall();
 
-  const handleLogin = async () => {
-    if(!(username.trim() && password.trim())){
+  const handleLogin = async (providedUsername?: string, providedPassword?: string) => {
+    const loginUsername = providedUsername || username; // Use provided username or state value
+    const loginPassword = providedPassword || password; // Use provided password or state value
+
+    console.log('Login button pressed'); // Log the button press for debugging
+    console.log('Username:', loginUsername); // Log the username for debugging
+    if (!(loginUsername.trim() && loginPassword.trim())) {
       return Toast.error('Please enter username and password!'); // Show error toast if fields are empty
     }
     await callApi('authentication/validate', {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${btoa(`${username}:${password}`)}`, // Basic authentication header
+        'Authorization': `Basic ${btoa(`${loginUsername}:${loginPassword}`)}`, // Basic authentication header
         'Content-Type': 'application/json',
       }
     })
   }
   useEffect(() => {
-    if (data && data.valid === true) {
-      Toast.success('Login successful!'); // Show success toast
-      router.replace('/screens/projects'); // Navigate to the home screen on successful login
-    } else {
-      Toast.error('Invalid username or password!'); // Show error toast for invalid credentials
+    if (data) {
+      if (data.valid === true) {
+        if (username && password) {
+          LocalStorage.setItem(LocalStorage.KEY_USER_NAME, username);
+          LocalStorage.setItem(LocalStorage.KEY_PASSWORD, password);
+        }
+
+        Toast.success('Login successful!'); // Show success toast
+        router.replace('/screens/projects'); // Navigate to the home screen on successful login
+      }
+      else {
+        Toast.error('Invalid username or password!'); // Show error toast for invalid credentials
+      }
+    } else if (error) {
+      Toast.error(error); // Show error toast if there's an error
     }
-  }, [data, router]);
+  }, [data, error]);
+
+
+  useEffect(() => {
+    const autoLogin = async () => {
+      const storedUsername = await LocalStorage.getItem(LocalStorage.KEY_USER_NAME);
+      const storedPassword = await LocalStorage.getItem(LocalStorage.KEY_PASSWORD);
+
+      console.log('Stored Username:', storedUsername); // Log the stored username for debugging
+      console.log('Stored Password:', storedPassword); // Log the stored password for debugging
+
+      if (storedUsername != null && storedPassword != null) {
+        console.log('Auto-login triggered'); // Log auto-login trigger
+        setUsername(storedUsername);
+        setPassword(storedPassword);
+        handleLogin(storedUsername, storedPassword);        
+      }
+    }
+
+    autoLogin(); // Call the autoLogin function on component mount
+  }, []);
 
   return (
-    <View style={{ backgroundColor: Colors.colorPrimaryDark, flex: 1 }}>
+    <>
+      <View style={{ backgroundColor: Colors.colorPrimaryDark, flex: 1 }}>
 
-      <View style={{
-        width: containerWidth,
-        alignSelf: 'center',
-        shadowColor: Colors.colorBlack,
-        shadowOffset: { width: 0, height: 5 },
-        shadowRadius: 3.84,
-        marginTop: 80, backgroundColor: Colors.colorWhite, paddingBottom: 50, paddingTop: 20, paddingHorizontal: 20, borderRadius: 10
-      }}>
-        <Text style={{ fontSize: 20, fontWeight: '500', alignSelf: 'center' }}>S o n a r  T r a c k</Text>
-        <Text style={{ fontSize: 16, marginTop: 10, alignSelf: 'center' }}>Hello there! 👋</Text>
-        <EditText userName='Username' onChangeText={setUsername} containerStyle={{ marginTop: 10 }} />
-        <EditText userName='Password' onChangeText={setPassword} containerStyle={{ marginTop: 10 }} secureTextEntry={true} />        
-        <MyButton text={"Login"} onPress={handleLogin} containerStyle={{ marginTop: 20 }} isLoading={loading} />
+        <View style={{
+          width: containerWidth,
+          alignSelf: 'center',
+          shadowColor: Colors.colorBlack,
+          shadowOffset: { width: 0, height: 5 },
+          shadowRadius: 3.84,
+          marginTop: 80, backgroundColor: Colors.colorWhite, paddingBottom: 50, paddingTop: 20, paddingHorizontal: 20, borderRadius: 10
+        }}>
+          <Text style={{ fontSize: 20, alignSelf: 'center', fontFamily:'mont-bold' }}>S o n a r  T r a c k</Text>
+          <Text style={{ fontSize: 16, marginTop: 10, alignSelf: 'center', fontFamily:'mont-semi-bold' }}>Hello there! 👋</Text>
+          <EditText userName='Username' value={username} onChangeText={setUsername} containerStyle={{ marginTop: 10 }} />
+          <EditText userName='Password' value={password} onChangeText={setPassword} containerStyle={{ marginTop: 10 }} secureTextEntry={true} />
+          <MyButton text={"Login"} onPress={() => {            
+            handleLogin();
+          }} containerStyle={{ marginTop: 20 }} isLoading={loading} />
 
+        </View>
       </View>
-      <ToastManager />
-    </View>
+      <ToastManager style={{
+        fontFamily: 'mont-bold', // Set your custom font family
+        fontSize: 16, // Optional: Adjust font size
+        color: Colors.colorPrimaryDark, // Optional: Adjust text color
+      }} />
+    </>
   )
 }
 
